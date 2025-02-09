@@ -1,0 +1,209 @@
+#include <iostream>
+#include <vector>
+#include <cassert>
+#include <string>
+#include <unordered_map>
+#include <stdexcept>
+
+struct TrafficSignalData {
+    std::string id;     // Unique identifier for the data
+    int volume;         // no. of vehicles 
+    double speed;       // average speed
+    int queueLength;    // length of the traffic line
+    int direction;      // 0 - left, 1 - straight, 2 - right
+
+    // Constructor with validation for direction
+    TrafficSignalData(const std::string& id, int v, double s, int ql, int d)
+        : id(id), volume(v), speed(s), queueLength(ql) {
+        setDirection(d);
+    }
+
+    // Destructor
+    ~TrafficSignalData() {}
+
+    // Getters
+    const std::string& getId() const { return id; }
+    int getVolume() const { return volume; }
+    double getSpeed() const { return speed; }
+    int getQueueLength() const { return queueLength; }
+    int getDirection() const { return direction; }
+
+    // Setters
+    void setId(const std::string& id) { this->id = id; }
+    void setVolume(int v) { volume = v; }
+    void setSpeed(double s) { speed = s; }
+    void setQueueLength(int ql) { queueLength = ql; }
+    void setDirection(int d) {
+        if (d < 0 || d > 2) {
+            throw std::invalid_argument("Invalid direction value");
+        }
+        direction = d;
+    }
+};
+
+class Sensor {
+private:
+    std::vector<TrafficSignalData> data;
+
+public:
+    // Constructor
+    Sensor() {}
+
+    // Destructor
+    ~Sensor() {}
+
+    // Add data with capacity reservation for efficiency
+    void addData(const TrafficSignalData& tsd) {
+        if (data.capacity() < data.size() + 1) {
+            data.reserve(data.size() + 10); // Reserve additional capacity
+        }
+        data.push_back(tsd);
+    }
+
+    // Get data by reference to avoid copying
+    const std::vector<TrafficSignalData>& getData() const {
+        return data;
+    }
+
+    // Clear data
+    void clearData() {
+        data.clear();
+    }
+};
+
+class CentralSensor {
+private:
+    std::unordered_map<std::string, Sensor> sensors; // Map sensor IDs to Sensor objects
+
+public:
+    // Add a new sensor
+    void addSensor(const std::string& sensorId) {
+        sensors[sensorId] = Sensor();
+    }
+
+    // Get data from a specific sensor
+    const std::vector<TrafficSignalData>& getSensorData(const std::string& sensorId) const {
+        auto it = sensors.find(sensorId);
+        if (it != sensors.end()) {
+            return it->second.getData();
+        }
+        static std::vector<TrafficSignalData> emptyData;
+        return emptyData;
+    }
+
+    // Add data to a specific sensor
+    void addDataToSensor(const std::string& sensorId, const TrafficSignalData& tsd) {
+        auto it = sensors.find(sensorId);
+        if (it != sensors.end()) {
+            it->second.addData(tsd);
+        }
+    }
+
+    // Clear data from all sensors
+    void clearAllData() {
+        for (auto& [id, sensor] : sensors) {
+            sensor.clearData();
+        }
+    }
+};
+
+void testTrafficSignalData() {
+    TrafficSignalData tsd("tsd1", 10, 30.5, 5, 1);
+
+    assert(tsd.getId() == "tsd1");
+    assert(tsd.getVolume() == 10);
+    assert(tsd.getSpeed() == 30.5);
+    assert(tsd.getQueueLength() == 5);
+    assert(tsd.getDirection() == 1);
+
+    tsd.setId("tsd2");
+    tsd.setVolume(20);
+    tsd.setSpeed(40.5);
+    tsd.setQueueLength(10);
+    tsd.setDirection(2);
+
+    assert(tsd.getId() == "tsd2");
+    assert(tsd.getVolume() == 20);
+    assert(tsd.getSpeed() == 40.5);
+    assert(tsd.getQueueLength() == 10);
+    assert(tsd.getDirection() == 2);
+
+    // Edge cases
+    try {
+        TrafficSignalData edgeTsd("edge", 0, -1.0, -5, 3);
+        assert(false); // Should not reach here
+    } catch (const std::invalid_argument& e) {
+        assert(true); // Expected exception
+    }
+
+    try {
+        TrafficSignalData extremeTsd("extreme", INT_MAX, DBL_MAX, INT_MAX, 0);
+        assert(extremeTsd.getVolume() == INT_MAX);
+        assert(extremeTsd.getSpeed() == DBL_MAX);
+        assert(extremeTsd.getQueueLength() == INT_MAX);
+        assert(extremeTsd.getDirection() == 0);
+    } catch (const std::invalid_argument& e) {
+        assert(false); // Should not throw exception
+    }
+}
+
+void testSensor() {
+    Sensor sensor;
+
+    TrafficSignalData tsd1("tsd1", 10, 30.5, 5, 1);
+    TrafficSignalData tsd2("tsd2", 20, 40.5, 10, 2);
+
+    sensor.addData(tsd1);
+    sensor.addData(tsd2);
+
+    const std::vector<TrafficSignalData>& data = sensor.getData();
+    assert(data.size() == 2);
+
+    assert(data[0].getId() == "tsd1");
+    assert(data[0].getVolume() == 10);
+    assert(data[0].getSpeed() == 30.5);
+    assert(data[0].getQueueLength() == 5);
+    assert(data[0].getDirection() == 1);
+
+    assert(data[1].getId() == "tsd2");
+    assert(data[1].getVolume() == 20);
+    assert(data[1].getSpeed() == 40.5);
+    assert(data[1].getQueueLength() == 10);
+    assert(data[1].getDirection() == 2);
+
+    sensor.clearData();
+    assert(sensor.getData().empty());
+}
+
+void testCentralSensor() {
+    CentralSensor centralSensor;
+
+    centralSensor.addSensor("sensor1");
+    centralSensor.addSensor("sensor2");
+
+    TrafficSignalData tsd1("tsd1", 10, 30.5, 5, 1);
+    TrafficSignalData tsd2("tsd2", 20, 40.5, 10, 2);
+
+    centralSensor.addDataToSensor("sensor1", tsd1);
+    centralSensor.addDataToSensor("sensor2", tsd2);
+
+    const std::vector<TrafficSignalData>& sensor1Data = centralSensor.getSensorData("sensor1");
+    assert(sensor1Data.size() == 1);
+    assert(sensor1Data[0].getId() == "tsd1");
+
+    const std::vector<TrafficSignalData>& sensor2Data = centralSensor.getSensorData("sensor2");
+    assert(sensor2Data.size() == 1);
+    assert(sensor2Data[0].getId() == "tsd2");
+
+    centralSensor.clearAllData();
+    assert(centralSensor.getSensorData("sensor1").empty());
+    assert(centralSensor.getSensorData("sensor2").empty());
+}
+
+int main() {
+    testTrafficSignalData();
+    testSensor();
+    testCentralSensor();
+    std::cout << "All tests passed!" << std::endl;
+    return 0;
+}
