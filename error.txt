@@ -1,0 +1,15 @@
+main.cpp: In function ‘void testTrafficSignalData()’:
+main.cpp:141:49: error: ‘INT_MAX’ was not declared in this scope
+  141 |         TrafficSignalData extremeTsd("extreme", INT_MAX, DBL_MAX, INT_MAX, 0);
+      |                                                 ^~~~~~~
+main.cpp:6:1: note: ‘INT_MAX’ is defined in header ‘’; did you forget to ‘#include ’?
+    5 | #include <unordered_map>
+  +++ |+#include <climits>
+    6 | #include <stdexcept>
+main.cpp:141:58: error: ‘DBL_MAX’ was not declared in this scope
+  141 |         TrafficSignalData extremeTsd("extreme", INT_MAX, DBL_MAX, INT_MAX, 0);
+      |                                                          ^~~~~~~
+main.cpp:6:1: note: ‘DBL_MAX’ is defined in header ‘’; did you forget to ‘#include ’?
+    5 | #include <unordered_map>
+  +++ |+#include <cfloat>
+    6 | #include <stdexcept>
